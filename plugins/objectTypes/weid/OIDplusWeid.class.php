@@ -84,12 +84,11 @@ class OIDplusWeid extends OIDplusObject {
 	const WEID_ROOT = '1.3.6.1.4.1.37553.8';
 	
 	public $oid;
-	public $weid;
+	public $weid = 'WEID';
 	public $oidObject;
 
 	public function implementsFeature($id) {
-		if (strtolower($id) == '1.3.6.1.4.1.37476.2.5.2.3.2') return true; // publicPages, modifyContent($id, &$title, &$icon, &$text)
-		if (strtolower($id) == '1.3.6.1.4.1.37476.2.5.2.3.4') return true; // publicPages, whoisObjectAttributes($id, &$out),  whoisRaAttributes($email, &$out)
+		//if (strtolower($id) == '1.3.6.1.4.1.37476.2.5.2.3.2')return true; // publicPages, modifyContent($id, &$title, &$icon, &$text)
 		return false;
 	}	
  	    
@@ -109,22 +108,63 @@ class OIDplusWeid extends OIDplusObject {
 		$ids[] = new OIDplusAltId('weid', str_ireplace('weid:','',WeidOidConverter::oid2weid($this->oid)), _L('%1-Notation [unregistered]','WEID_UNREGISTERED'));
 		return $ids;
 	}
-/*	
-	public final function getPluginDirectory() {
-		$reflector = new \ReflectionClass(get_called_class());
-		$path = dirname($reflector->getFilename());
-		return $path;
-	}
-
-	public function getManifest() {
-		$dir = $this->getPluginDirectory();
-		$ini = $dir.'/manifest.xml';
-		$manifest = new OIDplusPluginManifest();
-		return $manifest->loadManifest($ini) ? $manifest : null;
-	}
-*/
-	//	public function init($html=true) {} 	
 	
+	//SELECT name FROM `oidplus_asn1id` WHERE `oid`='oid:1.3.6.1.4.1.37553.8.1.8.8.11' 
+	//	$res2 = OIDplus::db()->query("select name from ###asn1id where oid = ? or oid = ? order by lfd", array("oid:".$this->nodeId(false), 'weid:'. str_ireplace('weid:','',$this->weid)));
+	public function getTitle() {
+		 // $res = OIDplus::db()->query("select title from ###objects where id = ?", array($this->nodeId()));
+		 //$row = $res->fetch_array();
+		//	die($row['title'].$this->nodeId());
+		$title = false;
+		
+		if (!OIDplus::baseConfig()->getValue('OBJECT_CACHING', true)) {
+			$res = OIDplus::db()->query("select title from ###objects where id = ?", array($this->nodeId()));
+			if ($res->num_rows() == 0) return false;
+			$row = $res->fetch_array();
+			$title = $row['title'];
+		} else {
+			self::_buildObjectInformationCache();
+		
+			if (isset(self::$_object_info_cache[$this->nodeId()])) {
+				$title = self::$_object_info_cache[$this->nodeId()][OIDplusObject::CACHE_TITLE];
+			}//else{		
+			
+			    //  $res = OIDplus::db()->query("select title from ###objects where id = ?", array($this->nodeId()));
+		       //  if ($res->num_rows() == 0) return false;
+			      //  $row = $res->fetch_array();
+		         //	$title = $row['title'];	
+				
+		    	 //   $title = false;
+			//}
+		}
+		if(false === $title){
+			$res = OIDplus::db()->query("select title from ###objects where id = ?", array($this->nodeId()));
+		    $row = $res->fetch_array();
+			$title = $row['title'];
+		}
+		if('' === $title){
+			$res = OIDplus::db()->query("select name from ###asn1id where oid = ? AND name <> '' LIMIT 1", array($this->nodeId()));
+		    $row = $res->fetch_array();
+			$title = $row['name'];
+		}
+		
+		return $title;
+	}
+ 	protected static function _buildObjectInformationCache() {
+		if (is_null(self::$_object_info_cache)) {
+			self::$_object_info_cache = array();
+			$res = OIDplus::db()->query("select id, parent, confidential, ra_email, title from ###objects");
+			while ($row = $res->fetch_array()) {
+				//	print_r($row['id'].'<br />');
+				self::$_object_info_cache[$row['id']] = array($row['confidential'], $row['parent'], $row['ra_email'], $row['title']);
+			}
+		}
+	}	
+	protected static $_object_info_cache = null;
+
+	public static function resetObjectInformationCache() {
+		self::$_object_info_cache = null;
+	}	
 	
 	public function afterObjectDelete($id){
 		
@@ -174,9 +214,9 @@ class OIDplusWeid extends OIDplusObject {
 
 		return OIDplusObject::parse(OIDplusOid::ns().':'.$oid_up);	
 	}	
-	
+/*	
    public function modifyContent($id, &$title, &$icon, &$text){
-	   
+	    
 	   
 	   $content = $text;
 	   
@@ -188,23 +228,17 @@ class OIDplusWeid extends OIDplusObject {
 
 	   $CRUD =$this->renderChildren($children, '<h4>Children:</h4>');
 	   $content = str_ireplace('%%CRUD%%', \PHP_EOL.$CRUD.\PHP_EOL.'%%CRUD%%', $content);	   
-	  
+	 
+	   $title = $this->getTitle();
 	   
+	  
 	   $text=$content;
    }
-	
+	*/
 	public function isChildOf(OIDplusObject $obj) {
 		return call_user_func_array([$this->oidObject, __FUNCTION__], func_get_args());	
 	}
 /*	
-	public function whoisObjectAttributes($id, &$out){
-		return call_user_func_array([$this->oidObject, __FUNCTION__], func_get_args());
-	}
-
-	public function whoisRaAttributes($email, &$out){
-		return call_user_func_array([$this->oidObject, __FUNCTION__], func_get_args());
-	}
- *//*	
 	public function getChildren() {
 		
 		$children = call_user_func_array([$this->oidObject, __FUNCTION__], func_get_args());
@@ -303,11 +337,15 @@ class OIDplusWeid extends OIDplusObject {
 	}
 	protected function oidInformation() {
 		$out = array();
-		$out[] = _L('Dot notation').': <code>' . $this->getDotNotation() . '</code>';
+		$out[] ='<a href="'.OIDplus::gui()->link($this->nodeId(true)).'">'
+			. _L('Dot notation')
+			.'</a>: <code>' . $this->getDotNotation() . '</code>';
 		$out[] = _L('ASN.1 notation').': <code>' . $this->getAsn1Notation(true) . '</code>';
 		$out[] = _L('OID-IRI notation').': <code>' . $this->getIriNotation(true) . '</code>';
 		if ($this->isWeid(true)) {
-			$out[] = _L('WEID notation').': <code>' . $this->getWeidNotation() . '</code>';
+			$out[] = '<a href="'.OIDplus::gui()->link($this->getWeidNotation(false)).'">'
+				._L('WEID notation')
+				.'</a>: <code>' . $this->getWeidNotation(true) . '</code>';
 		}
 		return '<p>'.implode('<br>',$out).'</p>';
 	}	
@@ -351,15 +389,10 @@ class OIDplusWeid extends OIDplusObject {
  
 	
 	public function getDotNotation() {
-	//	return $this->oid;
-		//	return str_ireplace('oid:', '', $this->oid);
-	 //	return \WeidOidConverter::weid2oid($this->weid);
    	  return call_user_func_array([$this->oidObject, __FUNCTION__], func_get_args());
 	}
 	
 	public static function parse($node_id) {
-		
-
 		
 		if(false===strpos($node_id, ':')){
 			return false;
@@ -367,8 +400,6 @@ class OIDplusWeid extends OIDplusObject {
 		
 		list($namespace, $weid) = explode(':', $node_id, 2);
 		if($namespace === OIDplusOid::ns() && substr($weid,0,strlen(self::WEID_ROOT) ) === self::WEID_ROOT	){
-		//	return OIDplusOid::parse($node_id);
-			//	return (new self(sanitizeOID($weid, 'auto')))->oidObject; 
 			return new self(sanitizeOID($weid, 'auto')); 
 		}
 		
@@ -419,30 +450,15 @@ class OIDplusWeid extends OIDplusObject {
 		return $obj;
 	}
 	
-	public function __call($n, $p) {
-		 
+	public function __call($n, $p) {		 
 		if(is_callable([$this->oidObject, $n])){
 			 return call_user_func_array([$this->oidObject, $n], $p);
 		 }else{
 			  throw new \Exception(sprintf('Magic function %s does not resolve to callable in '.__METHOD__, $n));
 		 }
 	}
-	public static function __callStatic($n, $p) {
-		 //$class = \get_called_class();
-		 $class=get_class($this->oidObject);
-		 if(is_callable($class.'::'.$n)){
-			 return call_user_func_array($class.'::'.$n, $p);
-		 }else{
-			   throw new \Exception(sprintf('Magic function %s does not resolve to callable in '.__METHOD__, $n));
-		 }
-	}
 
-
-	//public function __clone() {
-		//return OIDplusOid::parse($this->oid);		
-	//}
 	public function __clone() {
-		//return new self($this->oid);
 		return self::parse($this->weid);
 	}	
 	
@@ -453,8 +469,6 @@ class OIDplusWeid extends OIDplusObject {
         $idLocal= WeidOidConverter::base_convert_bigint($str, 36, 10);
 		//$newId = WeidOidConverter::oid2weid($this->oidObject->appendArcs($idLocal)->nodeId(false));
 		$newId = $this->oidObject->appendArcs($idLocal)->nodeId(false);
-	//	$newOid = WeidOidConverter::weid2oid($newId);
-	//	return $newOid;
 		return 'oid:'.$newId;
 	}
 	public function appendArcs(string $arcs) {
@@ -493,31 +507,24 @@ class OIDplusWeid extends OIDplusObject {
 	
 	public function crudShowId(OIDplusObject $parent) {
 		return $this->deltaDotNotation($parent);
-	}/*
-	public function deltaDotNotation(OIDplusObject $parent) {
-		if (!$parent->isRoot()) {
-			if (substr($this->oid, 0, strlen($parent->oid)+1) == $parent->oid.'.') {
-				return substr($this->oid, strlen($parent->oid)+1);
-			} else {
-				return false;
-			}
-		} else {
-			return $this->oid;
-		}
 	}
-	*/
-	public function deltaDotNotation(OIDplusObject $parent) {
+	public function deltaDotNotation(OIDplusObject $parent, $asWeid = false) {
+	    $result = false;
 		if (!$parent->isRoot()) {
 			if (substr($this->oid, 0, strlen($parent->nodeId(false))+1) == $parent->nodeId(false).'.') {
-				//return WeidOidConverter::oid2weid(substr($this->oid, strlen($parent->nodeId(false))+1));
-				return substr($this->oid, strlen($parent->nodeId(false))+1);
+				$result =substr($this->oid, strlen($parent->nodeId(false))+1);
 			} else {
-				return false;
+				$result =false;
 			}
 		} else {
-		//	return WeidOidConverter::oid2weid($this->oid);
-			return $this->oid;
+			$result =$this->oid;
 		}
+		
+		if(true===$asWeid && true===$parent->isWeid() && true===$this->isWeid()){
+			$result =WeidOidConverter::oid2weid($result);
+		}
+		
+		return $result;
 	}
 	
 	public function crudInsertPrefix() {
@@ -538,7 +545,7 @@ class OIDplusWeid extends OIDplusObject {
 	
 	
 	public static function objectTypeTitle() {
-		return _L('WEID (WEID)');
+		return _L('%1 (WEID)',self::root());
 	}
 
 	public static function objectTypeTitleShort() {
@@ -551,26 +558,10 @@ class OIDplusWeid extends OIDplusObject {
 
 	public static function root() {
 		return 'weid:4';
-		//return 'oid:'.self::WEID_ROOT;
 	}
 
 	public function isRoot() {
-		//return  $this->oid == '' || $this->oid == '1.3.6.1.4.1.37553.8' || $this->oid == 'oid:1.3.6.1.4.1.37553.8' || $this->weid == 'weid:4' || $this->oid == 'weid:';
-	    // $class=get_class($this->oidObject);
-		return 
-			 //    $this->oid == '' || 			  
-		    //    $this->weid == 'weid'
-		 //	|| $this->weid == 'weid:' 
-		 //	|| $this->weid == 'weid:4' 
-		 //	|| $this->oid == 'weid' 
-		 //	|| $this->oid == 'weid:' 
-		 //	|| $this->oid == 'weid:4' ||
-		 // 	 $this->oid == self::WEID_ROOT
-		 // 	|| $this->oid == 'oid:'.self::WEID_ROOT || 
-			 $this->oid == self::root()
-		 // 	||  $this->weid == WeidOidConverter::BASE
-			 // ||  $this->oid == WeidOidConverter::BASE
-				;
+		return $this->oid == self::root();
 	}
 	public function viewGetArcAsn1s(OIDplusObject $parent=null, $separator = ' | ') {
 		$asn_ids = array();
