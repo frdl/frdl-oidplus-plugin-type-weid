@@ -20,7 +20,7 @@
   }],
   "require": {
     "php": ">=7.2",   
-    "frdl/frdl-oidplus-object-type-trait"  
+    "frdl/frdl-oidplus-object-type-trait"   : "*"
   },
   "require-dev": {
     "frdl/frdlweb-composer-installers" : "*"
