@@ -20,10 +20,11 @@
   }],
   "require": {
     "php": ">=7.2",   
+     "frdl/frdlweb-composer-installers" : "*",	  
     "frdl/frdl-oidplus-object-type-trait"   : "*"
   },
   "require-dev": {
-    "frdl/frdlweb-composer-installers" : "*"
+   
   },
   "autoload": {
 	"classmap"  : ["plugins/objectTypes/weid/"]
