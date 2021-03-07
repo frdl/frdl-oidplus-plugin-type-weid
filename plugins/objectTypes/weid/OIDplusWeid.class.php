@@ -533,12 +533,13 @@ $this->getDotNotation()
 	}	
 	
 	public function addString($idLocal) {
+		
 		if (!$this->oidObject->isRoot()) {
 			if (strpos($str,'.') !== false || strpos($str,'-') !== false) throw new OIDplusException(_L('Please only submit one arc (not an absolute OID or multiple arcs).'));
 		}
 		
-		$str =(is_int($idLocal)) ? $idLocal : WeidOidConverter::base_convert_bigint($idLocal, 10, 36);
-        $idLocal= WeidOidConverter::base_convert_bigint($str, 36, 10);
+		//$idLocal =(is_int($idLocal)) ? $idLocal : WeidOidConverter::base_convert_bigint($idLocal, 10, 36);
+        $idLocal= WeidOidConverter::base_convert_bigint($idLocal, 36, 10);
 		//$newId = WeidOidConverter::oid2weid($this->oidObject->appendArcs($idLocal)->nodeId(false));
 		$newId = $this->oidObject->appendArcs($idLocal)->nodeId(false);
 		return 'oid:'.$newId;
