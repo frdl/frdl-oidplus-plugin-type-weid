@@ -220,7 +220,10 @@ $this->getDotNotation()
    public function modifyContent($id, &$title, &$icon, &$text){
 	   $icon = file_exists(__DIR__.'/icon_big.png') ? 'plugins/objectTypes/'.basename(__DIR__).'/icon_big.png' : '';
 	
-	    call_user_func_array([$this->oidObject, __FUNCTION__], [$id, $title, $icon, $text]);
+	   // call_user_func_array([$this->oidObject, __FUNCTION__], [$id, $title, $icon, $text]);
+	   $this->oidObject->modifyContent($id, $title, $icon, $text);
+	   
+	   
 	   
 	  if($id === $this->oid || $id === $this->weid){	   
 	   $children =$this->getChildren();
@@ -254,6 +257,15 @@ $this->getDotNotation()
 			//print_r($out);
 	//		$handled = false;
 	
+		
+				$uploaddir = $this->getDirectoryName(true, 0777);
+
+						
+		        chmod(dirname($uploaddir,3), 0777);
+				chmod(dirname($uploaddir,2), 0777);
+				chmod(dirname($uploaddir,1), 0777);
+				chmod(dirname($uploaddir), 0777);
+				chmod($uploaddir, 0777);
 	}
 	
 	public function one_up() {
@@ -413,7 +425,7 @@ $this->getDotNotation()
 			}
 
 			if (!$this->isLeafNode()) {
-				if (OIDplus::authUtils()::isAdminLoggedIn()) {
+				if (OIDplus::authUtils()->isAdminLoggedIn()) {
 					$content .= '<h2>'._L('Manage your root WEIDs').'</h2>';
 				} else {
 					$content .= '<h2>'._L('Root WEIDs').'</h2>';
@@ -445,6 +457,9 @@ $this->getDotNotation()
 		//call_user_func_array([$this->oidObject, __FUNCTION__], [$title, $content, $icon]);	
 	}
 	public function oidInformation() {
+		
+
+		
 		$out = array();
 		$out[] ='<a href="'.OIDplus::gui()->link($this->nodeId(true)).'">'
 			. _L('Dot notation')
