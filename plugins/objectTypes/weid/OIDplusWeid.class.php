@@ -485,6 +485,9 @@ $this->getDotNotation()
 			return false;
 		}
 		
+		
+		
+		
 		list($namespace, $weid) = explode(':', $node_id, 2);
 		if($namespace === OIDplusOid::ns() && substr($weid,0,strlen(self::WEID_ROOT) ) === self::WEID_ROOT	){
 			//return new self(sanitizeOID($weid, 'auto')); 
@@ -498,8 +501,9 @@ $this->getDotNotation()
 			return false;	
 		}
 		
-	
-		 
+	     $weid_in = $weid;
+		 $weid = strtoupper($weid);
+		
 		if(!($oid = WeidOidConverter::weid2oid(self::ns().':'.$weid))){
 		   return false;
 		}					
@@ -538,6 +542,11 @@ $this->getDotNotation()
 		
 		$obj = new self($oid); 
 			
+		
+		if($weid_in !== $weid){
+		  $new_uri = str_replace($weid_in, $weid, $_SERVER['REQUEST_URI']);
+		  header('Location: '.$new_uri);	
+		}
 		return $obj;
 	}
 	
